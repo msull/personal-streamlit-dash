@@ -16,9 +16,6 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY --chown=myuser:myuser shared-src /app/lib
 COPY --chown=myuser:myuser src/ /app
 
-# Copy in the symlinked gist pages
-COPY --chown=myuser:myuser gists/news-dashboard/streamlit_news_dashboard.py /app/pages/news_dashboard.py
-
 RUN mkdir /app/data
 RUN chown myuser:myuser /app/data
 
