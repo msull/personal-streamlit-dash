@@ -1,0 +1,9 @@
+diskcache
+humanize
+logzero
+newsapi-python
+openai
+pydantic
+streamlit>1.23
+watchdog
+tzdata

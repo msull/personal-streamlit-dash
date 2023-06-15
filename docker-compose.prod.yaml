@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  emilytarot:
+    image: emilytarot:latest
+    networks:
+      - traefik-public
+    environment:
+      TODOIST_API_KEY: "${TODOIST_API_KEY?Variable not set}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY?Variable not set}"
+      NEWSAPI_API_KEY: "${NEWSAPI_API_KEY?Variable not set}"
+      MAPQUEST_API_KEY: "${MAPQUEST_API_KEY?Variable not set}"
+      STREAMLIT_APP_OUTPUT_DIR: "/app/data"
+      NEWSAPI_CACHE_DIR: "/app/data/newsapi-cache"
+    volumes:
+      - appdata:/app/data
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.constraint-label=traefik-public
+        - traefik.http.routers.emilytarot-http.rule=Host(`${DOMAIN?Variable not set}`)
+        - traefik.http.routers.emilytarot-http.entrypoints=http
+        - traefik.http.routers.emilytarot-http.middlewares=https-redirect
+        - traefik.http.routers.emilytarot-https.rule=Host(`${DOMAIN?Variable not set}`)
+        - traefik.http.routers.emilytarot-https.entrypoints=https
+        - traefik.http.routers.emilytarot-https.tls=true
+        - traefik.http.routers.emilytarot-https.tls.certresolver=le
+        - traefik.http.services.emilytarot.loadbalancer.server.port=8501
+
+volumes:
+  appdata: {}
+
+networks:
+  traefik-public:
+    external: true

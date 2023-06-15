@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  personaldash:
+    image: personaldash:latest
+    build:
+      context: ./
+    environment:
+      TODOIST_API_KEY: "${TODOIST_API_KEY?Variable not set}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY?Variable not set}"
+      NEWSAPI_API_KEY: "${NEWSAPI_API_KEY?Variable not set}"
+      MAPQUEST_API_KEY: "${MAPQUEST_API_KEY?Variable not set}"
+      STREAMLIT_APP_OUTPUT_DIR: "/app/data"
+      NEWSAPI_CACHE_DIR: "/app/data/newsapi-cache"
+    volumes:
+      - ./src/streamlit_app.py:/app/streamlit_app.py
+      - ./local/streamlit_app_output:/app/data
+    ports:
+      - 9999:8501
