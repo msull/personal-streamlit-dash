@@ -4,6 +4,7 @@ logzero
 newsapi-python
 openai
 pydantic
+pypdfium2
 streamlit>1.23
-watchdog
 tzdata
+watchdog

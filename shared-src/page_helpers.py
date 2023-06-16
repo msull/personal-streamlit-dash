@@ -1,13 +1,5 @@
-import os
 from typing import Callable, List, Optional, Union
 
-from logzero import logger
-from pathlib import Path
-
-
-class Paths:
-    base_output_dir = Path(os.environ["STREAMLIT_APP_OUTPUT_DIR"])
-    newsapi_cache_dir = base_output_dir / 'newsapi-cache'
 
 def item_paginator(
     title: str,
@@ -65,7 +57,12 @@ def item_paginator(
     def set_item_index(item_num: int):
         st.session_state[item_num_var] = item_num
 
-    c1.button("Previous", on_click=decrement_item_index, key=f"{title}#Previous_btn")
+    c1.button(
+        "Previous",
+        on_click=decrement_item_index,
+        key=f"{title}#Previous_btn",
+        use_container_width=True,
+    )
 
     if item_actions:
         with c2:
@@ -110,7 +107,12 @@ def item_paginator(
             item_count - 1, st.session_state[item_num_var] + 1
         )
 
-    c7.button("Next", on_click=increment_item_index, key=f"{title}#Next_btn")
+    c7.button(
+        "Next",
+        on_click=increment_item_index,
+        key=f"{title}#Next_btn",
+        use_container_width=True,
+    )
 
     if enable_keypress_nav:
         enable_keypress_navigation()
@@ -125,7 +127,6 @@ def enable_keypress_navigation(prev_button="Previous", next_button="Next"):
 
     https://github.com/streamlit/streamlit/issues/1291#issuecomment-1022408379
     """
-    logger.debug("Enabling keypress navigation")
     import streamlit.components.v1 as components
 
     components.html(
