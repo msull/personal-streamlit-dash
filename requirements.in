@@ -8,3 +8,4 @@ pypdfium2
 streamlit>1.23
 tzdata
 watchdog
+openpyxl

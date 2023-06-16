@@ -1,0 +1,23 @@
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.black]
+line-length = 120
+
+[tool.pytest.ini_options]
+addopts = """
+-v -p no:warnings --no-header --durations=3 --strict-markers
+"""
+
+pythonpath = [
+    "shared-src",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    "if __name__ == \"__main__\"",
+    "def debug\\(\\):",
+]

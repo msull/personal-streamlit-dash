@@ -1,6 +1,13 @@
 from typing import Callable, List, Optional, Union
 
 
+def reset_paginator(title, st=None):
+    if not st:
+        import streamlit as st
+    item_num_var = f"{title}#item_num"
+    st.session_state[item_num_var] = 0
+
+
 def item_paginator(
     title: str,
     items: Union[int, List[str]],
@@ -46,9 +53,7 @@ def item_paginator(
 
     if isinstance(items, int):
         if display_item_names:
-            raise ValueError(
-                "Cannot set display_item_names=True when passing an integer for items"
-            )
+            raise ValueError("Cannot set display_item_names=True when passing an integer for items")
     item_count = items if isinstance(items, int) else len(items)
 
     def decrement_item_index():
@@ -66,14 +71,9 @@ def item_paginator(
 
     if item_actions:
         with c2:
-            selected_action = st.selectbox(
-                "select-item-action", sorted(item_actions), label_visibility="collapsed"
-            )
+            selected_action = st.selectbox("select-item-action", sorted(item_actions), label_visibility="collapsed")
 
-        if (
-            c3.button("Go", use_container_width=True, key=f"{title}#Go_btn")
-            and selected_action
-        ):
+        if c3.button("Go", use_container_width=True, key=f"{title}#Go_btn") and selected_action:
             item_actions[selected_action](st.session_state[item_num_var])
             st.experimental_rerun()
 
@@ -103,9 +103,7 @@ def item_paginator(
             st.experimental_rerun()
 
     def increment_item_index():
-        st.session_state[item_num_var] = min(
-            item_count - 1, st.session_state[item_num_var] + 1
-        )
+        st.session_state[item_num_var] = min(item_count - 1, st.session_state[item_num_var] + 1)
 
     c7.button(
         "Next",
