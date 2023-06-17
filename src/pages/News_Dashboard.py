@@ -243,6 +243,8 @@ def display_news():
 
 def main():
     st.title("News Dashboard")
+    if st.button('Clear Cache'):
+        cache.clear()
     display_news()
 
 
