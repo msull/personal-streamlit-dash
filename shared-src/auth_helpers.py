@@ -102,8 +102,10 @@ class LoginRequired(RuntimeError):
     pass
 
 
-def set_page_config(page_title: str, requires_auth: bool = False, **kwargs) -> Optional[Tuple[Authenticate, str]]:
-    st.set_page_config(page_title=page_title, **kwargs)
+def set_page_config(
+    page_title: str, requires_auth: bool = False, layout: Literal["centered", "wide"] = "wide", **kwargs
+) -> Optional[Tuple[Authenticate, str]]:
+    st.set_page_config(page_title=page_title, layout=layout, **kwargs)
 
     if requires_auth:
         for key in ["authentication_status", "name", "username", "logout", "init"]:
