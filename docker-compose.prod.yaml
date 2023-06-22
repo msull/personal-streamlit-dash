@@ -12,6 +12,10 @@ services:
       MAPQUEST_API_KEY: "${MAPQUEST_API_KEY?Variable not set}"
       STREAMLIT_APP_OUTPUT_DIR: "/app/data"
       NEWSAPI_CACHE_DIR: "/app/data/newsapi-cache"
+      INITIAL_NAME: "${INITIAL_NAME?Variable not set}"
+      INITIAL_PASSWORD: "${INITIAL_PASSWORD?Variable not set}"
+      INITIAL_USERNAME: "${INITIAL_USERNAME?Variable not set}"
+      INITIAL_EMAIL: "${INITIAL_EMAIL?Variable not set}"
     volumes:
       - appdata:/app/data
     deploy:
@@ -19,7 +23,6 @@ services:
         - traefik.enable=true
         - traefik.docker.network=traefik-public
         - traefik.constraint-label=traefik-public
-        - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
         - traefik.http.routers.dashboard-ui-http.rule=Host(`${DOMAIN?Variable not set}`)
         - traefik.http.routers.dashboard-ui-http.entrypoints=http
         - traefik.http.routers.dashboard-ui-http.middlewares=https-redirect

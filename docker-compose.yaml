@@ -1,8 +1,8 @@
 version: "3"
 
 services:
-  personaldash:
-    image: personaldash:latest
+  dashboard-ui:
+    image: personal-streamlit-dash:latest
     build:
       context: ./
     environment:
@@ -12,8 +12,12 @@ services:
       MAPQUEST_API_KEY: "${MAPQUEST_API_KEY?Variable not set}"
       STREAMLIT_APP_OUTPUT_DIR: "/app/data"
       NEWSAPI_CACHE_DIR: "/app/data/newsapi-cache"
+      INITIAL_NAME: "${INITIAL_NAME?Variable not set}"
+      INITIAL_PASSWORD: "${INITIAL_PASSWORD?Variable not set}"
+      INITIAL_USERNAME: "${INITIAL_USERNAME?Variable not set}"
+      INITIAL_EMAIL: "${INITIAL_EMAIL?Variable not set}"
     volumes:
-      - ./src/streamlit_app.py:/app/streamlit_app.py
+      - ./src/Home.py:/app/Home.py
       - ./src/pages:/app/pages
       - ./local/streamlit_app_output:/app/data
     ports:

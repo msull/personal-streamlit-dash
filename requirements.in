@@ -11,4 +11,3 @@ streamlit-authenticator
 streamlit>1.23
 tzdata
 watchdog
-PyYAML

@@ -1,13 +1,20 @@
 from typing import Tuple, Optional, Dict, Literal
+from uuid import uuid4
 
 import streamlit as st
-import yaml
-from streamlit_authenticator.authenticate import Authenticate
-from yaml.loader import SafeLoader
 from diskcache import Index
-from common_settings import AppSettings
-from pydantic import BaseModel
 from logzero import logger
+from pydantic import BaseModel, BaseSettings
+from streamlit_authenticator.authenticate import Authenticate
+
+from common_settings import AppSettings
+
+
+class DefaultUser(BaseSettings):
+    initial_name: str
+    initial_password: str
+    initial_username: str
+    initial_email: str
 
 
 class AuthUser(BaseModel):
@@ -35,23 +42,29 @@ def save_auth_db(authenticate: Authenticate):
     credentials_data["preauthorized"] = authenticate.preauthorized
 
 
-
-
-@st.cache_resource
+@st.cache_resource(experimental_allow_widgets=True)
 def load_auth_config() -> AuthSettings:
     app_settings = AppSettings()
     credentials_data = Index(str(app_settings.credentials_dir))
 
     if not credentials_data.get("credentials"):
-        default_config = load_default_auth_config()
+        default_user = DefaultUser()
         logger.warning("No auth database present; loading default authorization data")
         auth_settings = AuthSettings.parse_obj(
             {
-                "credentials": default_config["credentials"],
-                "cookie_name": default_config["cookie"]["name"],
-                "key": default_config["cookie"]["key"],
-                "cookie_expiry_days": default_config["cookie"]["expiry_days"],
-                "preauthorized": default_config.get("preauthorized"),
+                "credentials": {
+                    "usernames": {
+                        default_user.initial_username: {
+                            "email": default_user.initial_email,
+                            "name": default_user.initial_name,
+                            "password": default_user.initial_password,
+                        }
+                    }
+                },
+                "cookie_name": "dashboard-auth-cookie",
+                "key": uuid4().hex,
+                "cookie_expiry_days": 30,
+                "preauthorized": None,
             }
         )
         credentials_data["credentials"] = auth_settings.credentials
@@ -72,11 +85,6 @@ def load_auth_config() -> AuthSettings:
         )
 
     return auth_settings
-
-
-def load_default_auth_config():
-    with open("config.yaml") as file:
-        return yaml.load(file, Loader=SafeLoader)
 
 
 @st.cache_resource(experimental_allow_widgets=True)

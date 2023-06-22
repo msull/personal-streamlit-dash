@@ -122,9 +122,7 @@ pytz==2023.3
 pytz-deprecation-shim==0.1.0.post0
     # via tzlocal
 pyyaml==6.0
-    # via
-    #   -r requirements.in
-    #   streamlit-authenticator
+    # via streamlit-authenticator
 requests==2.31.0
     # via
     #   newsapi-python
