@@ -1,11 +1,14 @@
 diskcache
+extra-streamlit-components
 humanize
 logzero
 newsapi-python
 openai
+openpyxl
 pydantic
 pypdfium2
+streamlit-authenticator
 streamlit>1.23
 tzdata
 watchdog
-openpyxl
+PyYAML

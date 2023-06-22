@@ -1,8 +1,8 @@
 version: "3"
 
 services:
-  emilytarot:
-    image: emilytarot:latest
+  dashboard-ui:
+    image: personal-streamlit-dash:latest
     networks:
       - traefik-public
     environment:
@@ -19,17 +19,18 @@ services:
         - traefik.enable=true
         - traefik.docker.network=traefik-public
         - traefik.constraint-label=traefik-public
-        - traefik.http.routers.emilytarot-http.rule=Host(`${DOMAIN?Variable not set}`)
-        - traefik.http.routers.emilytarot-http.entrypoints=http
-        - traefik.http.routers.emilytarot-http.middlewares=https-redirect
-        - traefik.http.routers.emilytarot-https.rule=Host(`${DOMAIN?Variable not set}`)
-        - traefik.http.routers.emilytarot-https.entrypoints=https
-        - traefik.http.routers.emilytarot-https.tls=true
-        - traefik.http.routers.emilytarot-https.tls.certresolver=le
-        - traefik.http.services.emilytarot.loadbalancer.server.port=8501
+        - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
+        - traefik.http.routers.dashboard-ui-http.rule=Host(`${DOMAIN?Variable not set}`)
+        - traefik.http.routers.dashboard-ui-http.entrypoints=http
+        - traefik.http.routers.dashboard-ui-http.middlewares=https-redirect
+        - traefik.http.routers.dashboard-ui-https.rule=Host(`${DOMAIN?Variable not set}`)
+        - traefik.http.routers.dashboard-ui-https.entrypoints=https
+        - traefik.http.routers.dashboard-ui-https.tls=true
+        - traefik.http.routers.dashboard-ui-https.tls.certresolver=le
+        - traefik.http.services.dashboard-ui.loadbalancer.server.port=8501
 
 volumes:
-  appdata: {}
+  appdata: { }
 
 networks:
   traefik-public:
