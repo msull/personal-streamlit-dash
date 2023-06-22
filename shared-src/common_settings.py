@@ -15,6 +15,10 @@ class AppSettings(BaseSettings):
     app_debug: bool = True
 
     @property
+    def credentials_dir(self) -> Path:
+        return self.streamlit_app_output_dir / "credentials-db"
+
+    @property
     def newsapi_cache_dir(self) -> Path:
         return self.streamlit_app_output_dir / "newsapi-cache"
 

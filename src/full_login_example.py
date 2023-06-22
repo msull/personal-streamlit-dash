@@ -1,9 +1,11 @@
 import time
-import yaml
+
 import streamlit as st
-from yaml.loader import SafeLoader
-from streamlit_authenticator.authenticate import Authenticate
+import yaml
 from streamlit_authenticator import Hasher
+from streamlit_authenticator.authenticate import Authenticate
+from yaml.loader import SafeLoader
+
 
 @st.cache_data
 def load_config():

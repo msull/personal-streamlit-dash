@@ -3,15 +3,11 @@ from tempfile import NamedTemporaryFile
 
 import pypdfium2
 import streamlit as st
-
-from page_helpers import item_paginator
+from auth_helpers import set_page_config
 from common_settings import AppSettings
+from page_helpers import item_paginator
 
-st.set_page_config(
-    layout="wide",
-    initial_sidebar_state="collapsed",
-    page_title="PDF Explorer",
-)
+set_page_config("PDF Explorer", requires_auth=True)
 
 
 @st.cache_resource

@@ -1,15 +1,12 @@
 import json
 
 import openai
-from common_settings import AppSettings
-from page_helpers import date_id, save_session, load_session, item_paginator, check_or_x
 import streamlit as st
+from auth_helpers import set_page_config
+from common_settings import AppSettings
+from page_helpers import check_or_x, date_id, item_paginator, load_session, save_session
 
-st.set_page_config(
-    layout="wide",
-    initial_sidebar_state="auto",
-    page_title="GPT Chat",
-)
+set_page_config("GPT Chat Tool", requires_auth=True)
 settings = AppSettings()
 date_id()
 recent_conversations = settings.streamlit_app_output_dir / "gpt_chat" / "recent"
@@ -160,26 +157,23 @@ def load_saved_convo():
 
 
 def display_results():
-    columns = iter(st.columns(2))
     choices = ["Side-by-side", "One at a time"]
-    with next(columns):
-        if "view_mode" in st.session_state:
-            sel_idx = choices.index(st.session_state.view_mode)
-            view_mode = st.selectbox("View results", choices, index=sel_idx)
-        else:
-            view_mode = st.selectbox("View results", choices)
-        st.session_state.view_mode = view_mode
-    with next(columns):
-        if st.session_state.messages:
-            with st.form("Save session"):
-                save_name = st.text_input("Save as", value=st.session_state.loaded_name or "")
-                if st.form_submit_button("Save") and save_name:
-                    st.session_state.session_id = save_name
-                    st.session_state.loaded_name = save_name
-                    st.experimental_set_query_params(s="")
+    if "view_mode" in st.session_state:
+        sel_idx = choices.index(st.session_state.view_mode)
+        view_mode = st.selectbox("View results", choices, index=sel_idx)
+    else:
+        view_mode = st.selectbox("View results", choices)
+    st.session_state.view_mode = view_mode
+    if st.session_state.messages:
+        with st.form("Save session"):
+            save_name = st.text_input("Save as", value=st.session_state.loaded_name or "")
+            if st.form_submit_button("Save") and save_name:
+                st.session_state.session_id = save_name
+                st.session_state.loaded_name = save_name
+                st.experimental_set_query_params(s="")
 
-                    save_session(saved_conversations, set_query_param=False)
-                    st.experimental_rerun()
+                save_session(saved_conversations, set_query_param=False)
+                st.experimental_rerun()
 
     if not st.session_state.messages:
         return

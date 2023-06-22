@@ -22,21 +22,18 @@ The application also supports a debug mode, which displays the raw data of each 
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 from zoneinfo import ZoneInfo
 
 import streamlit as st
+from auth_helpers import set_page_config
 from diskcache import Cache
-from logzero import logger
 from humanize import precisedelta
+from logzero import logger
 from newsapi import NewsApiClient
-from pydantic import BaseModel, BaseSettings, SecretStr, HttpUrl
+from pydantic import BaseModel, BaseSettings, HttpUrl, SecretStr
 
-st.set_page_config(
-    layout="wide",
-    initial_sidebar_state="collapsed",
-    page_title="News Dashboard",
-)
+set_page_config("News Dashboard", requires_auth=True)
 
 now = datetime.now(tz=ZoneInfo("UTC"))
 
@@ -177,21 +174,15 @@ def display_articles(articles: List[Article]):
         else:
             st.markdown("---")
         st.write(article.title)
-        published_friendly = precisedelta(
-            now - article.publishedAt, minimum_unit="minutes", format="%0.0f"
-        )
-        st.write(
-            f"[Read more]({article.url}) - ", f"Published {published_friendly} ago"
-        )
+        published_friendly = precisedelta(now - article.publishedAt, minimum_unit="minutes", format="%0.0f")
+        st.write(f"[Read more]({article.url}) - ", f"Published {published_friendly} ago")
         if content := article.get_content():
             with st.expander("Content"):
                 st.write(content)
         if settings.app_debug:
             with st.expander("Raw Data"):
                 st.code(article.json(indent=2))
-        st.caption(
-            f"Source: {article.source['name']},  Author: {article.author or 'n/a'}"
-        )
+        st.caption(f"Source: {article.source['name']},  Author: {article.author or 'n/a'}")
 
 
 def display_news():
@@ -243,7 +234,7 @@ def display_news():
 
 def main():
     st.title("News Dashboard")
-    if st.button('Clear Cache'):
+    if st.button("Clear Cache"):
         cache.clear()
     display_news()
 

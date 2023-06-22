@@ -183,8 +183,15 @@ def load_session(session_dir: Union[Path, str]):
     if query_session:
         query_session = query_session[0]
 
+        # these are used by the streamlit-authenticator
+        preserve_keys = ["authentication_status", "name", "username", "logout", "init"]
+
+        preserved = {key: st.session_state.get(key) for key in preserve_keys}
+
         if "session_id" in st.session_state and st.session_state.session_id != query_session:
             st.session_state.clear()
+            for key, value in preserved.items():
+                st.session_state[key] = value
 
     if "session_id" not in st.session_state:
         if query_session:

@@ -3,14 +3,10 @@ import json
 import numpy as np
 import pandas as pd
 import streamlit as st
-
+from auth_helpers import set_page_config
 from page_helpers import item_paginator, reset_paginator
 
-st.set_page_config(
-    layout="wide",
-    initial_sidebar_state="collapsed",
-    page_title="Data Explorer",
-)
+set_page_config("Data Explorer", requires_auth=True)
 
 
 # Function to load data
@@ -31,7 +27,6 @@ def load_data(file):
         raise RuntimeError("Unknown / unsupported file type")
 
     return data.replace({np.NAN: None})
-
 
 
 @st.cache_data

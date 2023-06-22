@@ -28,7 +28,7 @@ def compile_requirements(c, install=False):
 def run_streamlit(c):
     with Paths.cd(c, Paths.repo_root / "src"):
         c.run(
-            "PYTHONPATH=../shared-src python -m streamlit run streamlit_app.py",
+            "PYTHONPATH=../shared-src python -m streamlit run Home.py",
             pty=True,
         )
 
