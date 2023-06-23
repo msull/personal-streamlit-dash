@@ -41,6 +41,17 @@ def init_state():
             st.session_state.cat2pronouns = cat2[1]
 
 
+def reset_state():
+    logger.debug("Resetting state")
+    session_id = date_id()
+    st.session_state.story_in_progress = False
+    st.session_state.session_id = session_id
+    st.session_state.bad_responses = []
+    st.session_state.total_tokens_used = 0
+    st.session_state.num_choices_made = 0
+    st.session_state.max_choices_per_story = 4
+
+
 def get_story_prompt_view():
     common_view()
     with st.expander("Change cat names"):
@@ -98,7 +109,7 @@ def get_story_prompt_view():
     if st.button("Get a random story prompt"):
         st.session_state.random_story_idea = add_cat_names(random.choice(STORY_IDEAS))
 
-    with st.form("prompt-form"):
+    with st.form("prompt-form", clear_on_submit=True):
         prompt = st.text_area("Input your story idea", value=st.session_state.random_story_idea)
         if st.form_submit_button("Begin the story"):
             check_for_flagged_content(prompt)
@@ -230,7 +241,15 @@ def main_view():
                 save_session(saved_tales_dir)
                 generate_story_page(expect_more_choices=expect_more)
     else:  # no more choices, story is over
-        pass
+        _, c1, _ = st.columns(3)
+        link = f"[Link to this story](?s={st.session_state.session_id})"
+        c1.subheader(link)
+        del c1
+        if st.button("Start Over", use_container_width=True, type="primary"):
+            st.experimental_set_query_params(s="")
+            reset_state()
+            st.experimental_rerun()
+        return
 
 
 def common_view():
@@ -238,7 +257,6 @@ def common_view():
 
 
 def add_cat_names(input: str) -> str:
-
     substitutions = {
         "CAT_NAME1": st.session_state.cat1name,
         "CAT_NAME2": st.session_state.cat2name,
@@ -251,10 +269,10 @@ def add_cat_names(input: str) -> str:
         "CAT1BROTHER": _brother(st.session_state.cat1pronouns),
         "CAT2BROTHER": _brother(st.session_state.cat2pronouns),
     }
-    if substitutions['CAT1BROTHER'] != substitutions['CAT2BROTHER']:
-        substitutions['BROTHER'] = 'sibling'
+    if substitutions["CAT1BROTHER"] != substitutions["CAT2BROTHER"]:
+        substitutions["BROTHER"] = "sibling"
     else:
-        substitutions['BROTHER'] = substitutions['CAT1BROTHER']
+        substitutions["BROTHER"] = substitutions["CAT1BROTHER"]
     return input.format(**substitutions)
 
 
