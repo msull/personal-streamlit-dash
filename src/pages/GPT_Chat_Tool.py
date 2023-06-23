@@ -8,7 +8,6 @@ from page_helpers import check_or_x, date_id, item_paginator, load_session, save
 
 set_page_config("GPT Chat Tool", requires_auth=True)
 settings = AppSettings()
-date_id()
 recent_conversations = settings.streamlit_app_output_dir / "gpt_chat" / "recent"
 recent_conversations.mkdir(parents=True, exist_ok=True)
 saved_conversations = settings.streamlit_app_output_dir / "gpt_chat" / "saved"
