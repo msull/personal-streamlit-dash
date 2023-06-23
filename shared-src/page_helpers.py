@@ -58,6 +58,11 @@ def item_paginator(
     if st.session_state[item_num_var] > item_count - 1:
         st.session_state[item_num_var] = item_count - 1
 
+    if st.session_state[item_num_var] < 0:
+        st.session_state[item_num_var] = 0
+
+
+
     if not item_count:
         st.write("No items to display")
         return
