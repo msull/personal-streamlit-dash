@@ -19,29 +19,68 @@ variables and the Pydantic library.
 
 The application also supports a debug mode, which displays the raw data of each article when enabled (on by default).
 """
-
+import json
 from datetime import datetime
-from pathlib import Path
 from typing import List, Optional
 from zoneinfo import ZoneInfo
 
 import streamlit as st
 from auth_helpers import set_page_config
+from common_settings import AppSettings
 from diskcache import Cache
 from humanize import precisedelta
 from logzero import logger
 from newsapi import NewsApiClient
-from pydantic import BaseModel, BaseSettings, HttpUrl, SecretStr
+from pydantic import BaseModel, HttpUrl
 
 set_page_config("News Dashboard", requires_auth=True)
 
 now = datetime.now(tz=ZoneInfo("UTC"))
 
+NUM_ARTICLES = 50
 
-class AppSettings(BaseSettings):
-    newsapi_api_key: SecretStr  # set NEWSAPI_API_KEY env variable with your apikey
-    newsapi_cache_dir: Path  # set NEWSAPI_CACHE_DIR env variable where cache can be created
-    app_debug: bool = True
+
+class SessionData(BaseModel):
+    newsdash_init: bool = True
+    hidden_articles: List[str] = []
+    live_category: str = "all"
+    live_article_urls: List[str] = []
+    hide_read: bool = True
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        self.save_to_session()
+
+    def save_to_session(self):
+        for k, v in self.dict().items():
+            st.session_state[k] = v
+
+    def hide_article(self, url):
+        session_data.hidden_articles.append(url)
+        self.save_to_session()
+        self._save_hidden_articles()
+
+    def _save_hidden_articles(self):
+        save_name = st.session_state.get("username") or "global"
+        path = settings.newsapi_hidden_urls_dir / (save_name + ".json")
+        path.write_text(json.dumps(self.hidden_articles))
+
+    def load_saved_hidden_article_data(self):
+        if self.hidden_articles:
+            return
+
+        save_name = st.session_state.get("username") or "global"
+        path = settings.newsapi_hidden_urls_dir / (save_name + ".json")
+        if not path.exists():
+            return
+        self.hidden_articles = json.loads(path.read_text())
+
+
+if "newsdash_init" not in st.session_state:
+    session_data = SessionData()
+    session_data.save_to_session()
+else:
+    session_data = SessionData.parse_obj(st.session_state)
 
 
 @st.cache_resource
@@ -50,6 +89,7 @@ def get_settings():
 
 
 settings = AppSettings()
+settings.newsapi_hidden_urls_dir.mkdir(exist_ok=True, parents=True)
 
 
 @st.cache_resource
@@ -115,7 +155,7 @@ def fetch_news_data(search_term: str) -> List[Article]:
     else:
         logger.info(f"Fetching headlines for {search_term=} data from NewsAPI")
 
-        data = newsapi.get_everything(q=search_term, page_size=50, language="en")
+        data = newsapi.get_everything(q=search_term, page_size=NUM_ARTICLES, language="en")
         if not data["status"] == "ok":
             st.error("Error fetching newsapi data: ", data)
             return []
@@ -138,6 +178,7 @@ def fetch_live_headlines(category: Optional[str] = None) -> List[Article]:
     Returns:
         List[Article]: A list of live news headlines, sorted by publication date.
     """
+    logger.info(f"Getting live news for {category=}")
     if category:
         cachekey = f"live-headlines-{category}"
     else:
@@ -147,33 +188,47 @@ def fetch_live_headlines(category: Optional[str] = None) -> List[Article]:
     else:
         logger.info("Fetching live headlines data from NewsAPI")
 
-        data = newsapi.get_top_headlines(category=category, page_size=50)
+        data = newsapi.get_top_headlines(category=category, page_size=NUM_ARTICLES)
         if not data["status"] == "ok":
             st.error("Error fetching newsapi data: ", data)
+            session_data.live_article_urls = []
             return []
         logger.debug("Caching data")
         cache.set(cachekey, data, expire=7200)  # 2 hours
 
-    return sorted(
+    data = sorted(
         (Article(**article) for article in data["articles"]),
         key=lambda x: x.publishedAt,
         reverse=True,
     )
+    session_data.live_article_urls = [x.url for x in data]
+    return data
 
 
-def display_articles(articles: List[Article]):
+def display_articles(articles: List[Article], hide_read=True):
     """Displays a list of news articles on the Streamlit page.
 
     Args:
         articles (List[Article]): The list of articles to display.
     """
+
     first = True
-    for article in articles:
+    hidden_placeholder = st.empty()
+    num_hidden = 0
+    if hide_read:
+        hidden_placeholder.write(f"Hidden {num_hidden}")
+    for idx, article in enumerate(articles):
+        if hide_read and article.url in session_data.hidden_articles:
+            num_hidden += 1
+            hidden_placeholder.write(f"Hidden {num_hidden}")
+            continue
+
         if first:
             first = False
         else:
             st.markdown("---")
         st.write(article.title)
+        st.checkbox("Read", key=f"read-{idx}", value=article.url in session_data.hidden_articles)
         published_friendly = precisedelta(now - article.publishedAt, minimum_unit="minutes", format="%0.0f")
         st.write(f"[Read more]({article.url}) - ", f"Published {published_friendly} ago")
         if content := article.get_content():
@@ -199,30 +254,36 @@ def display_news():
         col2 = st.columns(1)[0]
 
     # display the live news headlines
-    with col2.form("Live News"):
+    with col2.form("Live News", clear_on_submit=False):
+        options = [
+            "all",
+            "business",
+            "entertainment",
+            "general",
+            "health",
+            "science",
+            "sports",
+            "technology",
+        ]
         limit_categories = st.selectbox(
-            "Live News - Category",
-            options=[
-                "all",
-                "business",
-                "entertainment",
-                "general",
-                "health",
-                "science",
-                "sports",
-                "technology",
-            ],
+            "Live News - Category", options=options, index=options.index(session_data.live_category)
         )
+        hide_read = st.checkbox("Hide read", session_data.hide_read)
+        if st.form_submit_button("Update"):
+            session_data.live_category = limit_categories
+            session_data.hide_read = hide_read
+            for x in range(NUM_ARTICLES):
+                if st.session_state.get(f"read-{x}"):
+                    session_data.hide_article(session_data.live_article_urls[x])
+            st.experimental_rerun()
         if limit_categories == "all":
             limit_categories = None
 
-        st.form_submit_button("Update")
-
         # Fetch live headlines
-        live_news_data = fetch_live_headlines(limit_categories)
+        articles = fetch_live_headlines(limit_categories)
         # Display live news in right column
         st.subheader("Live News")
-        display_articles(live_news_data)
+        display_articles(articles, hide_read)
 
     # Display news in main column
     if search_term:
@@ -239,5 +300,6 @@ def main():
     display_news()
 
 
-if __name__ == "__main__":
-    main()
+main()
+with st.expander("Session Data"):
+    st.write(st.session_state)

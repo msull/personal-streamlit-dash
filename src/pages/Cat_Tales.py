@@ -3,13 +3,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 import streamlit as st
-from logzero import logger
-
 from auth_helpers import set_page_config
 from cat_tales_helpers import *
-from chat_session import check_for_flagged_content, ChatSession
+from chat_session import ChatSession, check_for_flagged_content
 from common_settings import AppSettings
-from page_helpers import save_session, load_session, date_id
+from logzero import logger
+from page_helpers import date_id, load_session, save_session
 
 set_page_config("Cat Tales", requires_auth=False)
 settings = AppSettings()

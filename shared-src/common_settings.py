@@ -23,5 +23,9 @@ class AppSettings(BaseSettings):
         return self.streamlit_app_output_dir / "newsapi-cache"
 
     @property
+    def newsapi_hidden_urls_dir(self) -> Path:
+        return self.streamlit_app_output_dir / "newsapi-hidden-urls"
+
+    @property
     def pdf_uploads(self) -> Path:
         return self.streamlit_app_output_dir / "pdf-upload-dir"
