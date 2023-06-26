@@ -76,13 +76,6 @@ class SessionData(BaseModel):
         self.hidden_articles = json.loads(path.read_text())
 
 
-if "newsdash_init" not in st.session_state:
-    session_data = SessionData()
-    session_data.save_to_session()
-else:
-    session_data = SessionData.parse_obj(st.session_state)
-
-
 @st.cache_resource
 def get_settings():
     return AppSettings()
@@ -255,16 +248,7 @@ def display_news():
 
     # display the live news headlines
     with col2.form("Live News", clear_on_submit=False):
-        options = [
-            "all",
-            "business",
-            "entertainment",
-            "general",
-            "health",
-            "science",
-            "sports",
-            "technology",
-        ]
+        options = ["all", "business", "entertainment", "general", "health", "science", "sports", "technology"]
         limit_categories = st.selectbox(
             "Live News - Category", options=options, index=options.index(session_data.live_category)
         )
@@ -300,6 +284,15 @@ def main():
     display_news()
 
 
-main()
-with st.expander("Session Data"):
-    st.write(st.session_state)
+### APP STARTUP
+try:
+    if "newsdash_init" not in st.session_state:
+        session_data = SessionData()
+        session_data.load_saved_hidden_article_data()
+        session_data.save_to_session()
+    else:
+        session_data = SessionData.parse_obj(st.session_state)
+    main()
+finally:
+    with st.sidebar.expander("Session Data"):
+        st.write(dict(sorted(st.session_state.items())))
