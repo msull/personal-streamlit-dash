@@ -1,11 +1,11 @@
 import json
-from pathlib import Path
-
-import streamlit as st
 import random
 from datetime import datetime
+from pathlib import Path
 from string import ascii_lowercase
 from typing import Callable, List, Optional, Union
+
+import streamlit as st
 
 
 def item_paginator(
@@ -60,8 +60,6 @@ def item_paginator(
 
     if st.session_state[item_num_var] < 0:
         st.session_state[item_num_var] = 0
-
-
 
     if not item_count:
         st.write("No items to display")

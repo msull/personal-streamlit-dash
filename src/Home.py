@@ -1,5 +1,4 @@
 import streamlit as st
-
 from auth_helpers import LoginRequired, save_auth_db, set_page_config
 
 try:
@@ -7,6 +6,7 @@ try:
 except LoginRequired:
     pass
 else:
+
     def main():
         navbar, profile = st.columns((3, 1))
 
@@ -33,6 +33,7 @@ else:
         #         st.success("Entries updated successfully")
         # except Exception as e:
         #     st.error(e)
+
     main()
 finally:
     with st.sidebar.expander("Session Data"):
