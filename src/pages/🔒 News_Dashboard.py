@@ -62,6 +62,12 @@ class SessionData(BaseModel):
             self.save_to_session()
             self._save_hidden_articles()
 
+    def unhide_article(self, url):
+        if url in session_data.hidden_articles:
+            session_data.hidden_articles.pop(session_data.hidden_articles.index(url))
+            self.save_to_session()
+            self._save_hidden_articles()
+
     def _save_hidden_articles(self):
         save_name = st.session_state.get("username") or "global"
         path = settings.newsapi_hidden_urls_dir / (save_name + ".json")
@@ -187,7 +193,7 @@ def fetch_live_headlines(category: Optional[str] = None) -> List[Article]:
     return data
 
 
-def display_articles(articles: List[Article], hide_read=True):
+def display_articles(articles: List[Article], hide_read=True, search_results=False):
     """Displays a list of news articles on the Streamlit page.
 
     Args:
@@ -214,7 +220,18 @@ def display_articles(articles: List[Article], hide_read=True):
         with next(cols):
             st.write(f"[{article.title}]({article.url})")
         with next(cols):
-            st.checkbox("Read", key=f"read-{idx}", value=article.url in session_data.hidden_articles)
+            if not search_results:
+                key = f"read-{idx}"
+                is_read = st.checkbox("Read", key=key, value=article.url in session_data.hidden_articles)
+                if is_read:
+                    if article.url not in session_data.hidden_articles:
+                        session_data.hide_article(article.url)
+                        st.experimental_rerun()
+                else:
+                    if article.url in session_data.hidden_articles:
+                        session_data.unhide_article(article.url)
+                        st.experimental_rerun()
+
         published_friendly = precisedelta(now - article.publishedAt, minimum_unit="minutes", format="%0.0f")
         st.caption(
             f"Published {published_friendly} ago | Source: {article.source['name']},  Author: {article.author or 'n/a'}"
@@ -243,38 +260,40 @@ def display_news():
 
     # display the live news headlines
     with col2.form("Live News", clear_on_submit=False):
+        if st.form_submit_button("Generate AI Headlines", use_container_width=True):
+            these_articles = fetch_live_headlines(session_data.live_category)[:]
+            with st.spinner("Generating AI Headlines for current article list"):
+                headline_formatter.generate_ai_headlines_for_articles(these_articles)
+                st.experimental_rerun()
+
         options = ["all", "business", "entertainment", "general", "health", "science", "sports", "technology"]
+
         limit_categories = st.selectbox(
             "Live News - Category", options=options, index=options.index(session_data.live_category)
         )
-        hide_read = st.checkbox("Hide read", session_data.hide_read)
-        cols = iter(st.columns((1, 6)))
-        with next(cols):
-            if st.form_submit_button("Update"):
-                session_data.live_category = limit_categories
-                session_data.hide_read = hide_read
-                for x in range(NUM_ARTICLES):
-                    if st.session_state.get(f"read-{x}"):
-                        session_data.hide_article(session_data.live_article_urls[x])
-                st.experimental_rerun()
-        with next(cols):
-            if st.form_submit_button("Generate AI Headlines"):
-                output_data = {}
-
-                these_articles = fetch_live_headlines(session_data.live_category)[:]
-                with st.spinner("Generating AI Headlines for current article list"):
-                    headline_formatter.generate_ai_headlines_for_articles(these_articles)
-                    st.experimental_rerun()
 
         if limit_categories == "all":
-            limit_categories = None
+            _limit_categories = None
+        else:
+            _limit_categories = limit_categories
 
         # Fetch live headlines
-        articles = fetch_live_headlines(limit_categories)
+        articles = fetch_live_headlines(_limit_categories)
+
+        hide_read = st.checkbox("Hide read", session_data.hide_read)
+        if st.form_submit_button("Update"):
+            session_data.live_category = limit_categories
+            session_data.hide_read = hide_read
+            for x in range(NUM_ARTICLES):
+                if st.session_state.get(f"read-{x}"):
+                    session_data.hide_article(session_data.live_article_urls[x])
+            st.experimental_rerun()
+
+    with col2:
         # Display live news in right column
         st.subheader("Live News")
         display_articles(articles, hide_read)
-        if st.form_submit_button("Mark all read", use_container_width=True):
+        if st.button("Mark all read", use_container_width=True):
             for x in range(NUM_ARTICLES):
                 session_data.hide_article(session_data.live_article_urls[x])
             st.experimental_rerun()
@@ -284,7 +303,7 @@ def display_news():
         news_data = fetch_news_data(search_term)
         with col1:
             st.subheader("Search Results")
-            display_articles(news_data)
+            display_articles(news_data, search_results=True)
 
 
 def main():
