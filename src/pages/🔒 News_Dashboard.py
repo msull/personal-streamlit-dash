@@ -31,13 +31,14 @@ from diskcache import Cache
 from humanize import precisedelta
 from logzero import logger
 from newsapi import NewsApiClient
-from pydantic import BaseModel, HttpUrl
+from newsdash_helpers import Article, NewsHeadlineFormatter
+from pydantic import BaseModel
 
 set_page_config("News Dashboard", requires_auth=True)
 
 now = datetime.now(tz=ZoneInfo("UTC"))
 
-NUM_ARTICLES = 50
+NUM_ARTICLES = 30
 
 
 class SessionData(BaseModel):
@@ -56,9 +57,10 @@ class SessionData(BaseModel):
             st.session_state[k] = v
 
     def hide_article(self, url):
-        session_data.hidden_articles.append(url)
-        self.save_to_session()
-        self._save_hidden_articles()
+        if url not in session_data.hidden_articles:
+            session_data.hidden_articles.append(url)
+            self.save_to_session()
+            self._save_hidden_articles()
 
     def _save_hidden_articles(self):
         save_name = st.session_state.get("username") or "global"
@@ -78,22 +80,36 @@ class SessionData(BaseModel):
 
 @st.cache_resource
 def get_settings():
-    return AppSettings()
+    return AppSettings(
+        app_debug=False,
+    )
 
 
-settings = AppSettings()
+settings = get_settings()
 settings.newsapi_hidden_urls_dir.mkdir(exist_ok=True, parents=True)
 
 
 @st.cache_resource
 def news_api_cache():
+    cache = Cache(str(settings.newsapi_cache_dir))
     logger.debug("Setting up NewsAPI Cache")
-    return Cache(str(settings.newsapi_cache_dir))
+    logger.debug("Expiring cache items; expired:")
+    logger.debug(cache.expire())
+    return cache
+
+
+@st.cache_resource
+def news_api_ai_headlines_cache():
+    cache = Cache(str(settings.newsapi_ai_headlines_cache_dir))
+    logger.debug("Setting up NewsAPI AI Headlines Cache")
+    logger.debug("Expiring headline cache items; expired:")
+    logger.debug(cache.expire())
+
+    return cache
 
 
 cache = news_api_cache()
-logger.debug("Expiring cache items; expired:")
-logger.debug(cache.expire())
+headline_cache = news_api_ai_headlines_cache()
 
 
 @st.cache_resource
@@ -103,34 +119,7 @@ def news_api_client():
 
 
 newsapi = news_api_client()
-
-
-def _clean_content(content: str) -> str:
-    """Cleans the content text by removing unwanted characters and prefixes.
-
-    Args:
-        content (str): The raw content text.
-
-    Returns:
-        str: The cleaned content text.
-    """
-    if not content:
-        return ""
-    content = content.replace("\r", "").replace("\n", " ").replace("  ", " ")
-    return content.removeprefix("Comment on this story Comment")
-
-
-class Article(BaseModel):
-    author: Optional[str]
-    title: str
-    description: Optional[str]
-    url: HttpUrl
-    publishedAt: datetime
-    content: Optional[str]
-    source: dict
-
-    def get_content(self) -> str:
-        return _clean_content(self.content)
+headline_formatter = NewsHeadlineFormatter(cache=headline_cache)
 
 
 def fetch_news_data(search_term: str) -> List[Article]:
@@ -181,7 +170,7 @@ def fetch_live_headlines(category: Optional[str] = None) -> List[Article]:
     else:
         logger.info("Fetching live headlines data from NewsAPI")
 
-        data = newsapi.get_top_headlines(category=category, page_size=NUM_ARTICLES)
+        data = newsapi.get_top_headlines(country="us", category=category, page_size=NUM_ARTICLES)
         if not data["status"] == "ok":
             st.error("Error fetching newsapi data: ", data)
             session_data.live_article_urls = []
@@ -220,17 +209,23 @@ def display_articles(articles: List[Article], hide_read=True):
             first = False
         else:
             st.markdown("---")
-        st.write(article.title)
-        st.checkbox("Read", key=f"read-{idx}", value=article.url in session_data.hidden_articles)
+
+        cols = iter(st.columns((6, 1)))
+        with next(cols):
+            st.write(f"[{article.title}]({article.url})")
+        with next(cols):
+            st.checkbox("Read", key=f"read-{idx}", value=article.url in session_data.hidden_articles)
         published_friendly = precisedelta(now - article.publishedAt, minimum_unit="minutes", format="%0.0f")
-        st.write(f"[Read more]({article.url}) - ", f"Published {published_friendly} ago")
-        if content := article.get_content():
-            with st.expander("Content"):
-                st.write(content)
+        st.caption(
+            f"Published {published_friendly} ago | Source: {article.source['name']},  Author: {article.author or 'n/a'}"
+        )
+
+        if content := headline_formatter.get_headline(article):
+            # with st.expander("Content"):
+            st.write(content)
         if settings.app_debug:
             with st.expander("Raw Data"):
                 st.code(article.json(indent=2))
-        st.caption(f"Source: {article.source['name']},  Author: {article.author or 'n/a'}")
 
 
 def display_news():
@@ -253,13 +248,24 @@ def display_news():
             "Live News - Category", options=options, index=options.index(session_data.live_category)
         )
         hide_read = st.checkbox("Hide read", session_data.hide_read)
-        if st.form_submit_button("Update"):
-            session_data.live_category = limit_categories
-            session_data.hide_read = hide_read
-            for x in range(NUM_ARTICLES):
-                if st.session_state.get(f"read-{x}"):
-                    session_data.hide_article(session_data.live_article_urls[x])
-            st.experimental_rerun()
+        cols = iter(st.columns((1, 6)))
+        with next(cols):
+            if st.form_submit_button("Update"):
+                session_data.live_category = limit_categories
+                session_data.hide_read = hide_read
+                for x in range(NUM_ARTICLES):
+                    if st.session_state.get(f"read-{x}"):
+                        session_data.hide_article(session_data.live_article_urls[x])
+                st.experimental_rerun()
+        with next(cols):
+            if st.form_submit_button("Generate AI Headlines"):
+                output_data = {}
+
+                these_articles = fetch_live_headlines(session_data.live_category)[:]
+                with st.spinner("Generating AI Headlines for current article list"):
+                    headline_formatter.generate_ai_headlines_for_articles(these_articles)
+                    st.experimental_rerun()
+
         if limit_categories == "all":
             limit_categories = None
 
@@ -268,6 +274,10 @@ def display_news():
         # Display live news in right column
         st.subheader("Live News")
         display_articles(articles, hide_read)
+        if st.form_submit_button("Mark all read", use_container_width=True):
+            for x in range(NUM_ARTICLES):
+                session_data.hide_article(session_data.live_article_urls[x])
+            st.experimental_rerun()
 
     # Display news in main column
     if search_term:

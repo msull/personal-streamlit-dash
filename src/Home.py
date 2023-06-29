@@ -1,5 +1,6 @@
 import streamlit as st
 from auth_helpers import LoginRequired, save_auth_db, set_page_config
+import extra_streamlit_components as stx
 
 try:
     authenticator, username = set_page_config("Home", requires_auth=True)
@@ -12,6 +13,8 @@ else:
 
         with profile:
             authenticator.logout("Logout", "main")
+
+        authenticator.logout("Logout", "sidebar", key='logout-side')
         st.header(f"Welcome *{username}*")
         st.write("Choose a page from the left")
 
@@ -21,6 +24,12 @@ else:
                 save_auth_db(authenticator)
         except Exception as e:
             st.error(e)
+
+        with st.expander("Session Data"):
+            st.write(dict(sorted(st.session_state.items())))
+        with st.expander("Cookies"):
+            cookie_mgr = stx.CookieManager("asdf")
+            st.json(cookie_mgr.get_all())
 
         # # Creating a password reset widget
         # try:
@@ -35,6 +44,5 @@ else:
         #     st.error(e)
 
     main()
-finally:
-    with st.sidebar.expander("Session Data"):
-        st.write(dict(sorted(st.session_state.items())))
+
+

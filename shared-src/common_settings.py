@@ -23,6 +23,12 @@ class AppSettings(BaseSettings):
         return self.streamlit_app_output_dir / "newsapi-cache"
 
     @property
+    def newsapi_ai_headlines_cache_dir(self) -> Path:
+        p = self.streamlit_app_output_dir / "newsapi-ai-headlines-cache"
+        p.mkdir(exist_ok=True, parents=True)
+        return p
+
+    @property
     def newsapi_hidden_urls_dir(self) -> Path:
         return self.streamlit_app_output_dir / "newsapi-hidden-urls"
 

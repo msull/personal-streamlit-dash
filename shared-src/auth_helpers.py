@@ -87,7 +87,7 @@ def load_auth_config() -> AuthSettings:
     return auth_settings
 
 
-@st.cache_resource(experimental_allow_widgets=True)
+# @st.cache_resource(experimental_allow_widgets=True)
 def create_authenticator(config):
     return Authenticate(
         config["credentials"],
@@ -112,6 +112,7 @@ def set_page_config(
             if key not in st.session_state:
                 st.session_state[key] = None
         config = load_auth_config()
+
         authenticator = create_authenticator(config.dict())
 
         name, authentication_status, username = authenticator.login("Login", "main")

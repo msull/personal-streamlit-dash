@@ -1,21 +1,20 @@
 from typing import List
 
 import streamlit as st
-from logzero import logger
-from pydantic import Field
-
 from auth_helpers import set_page_config
 from chat_session import ChatSession, check_for_flagged_content
 from common_settings import AppSettings as _AppSettings
+from logzero import logger
+from pydantic import Field
 from session_manager import SessionDataBase
 from spell_engine_helpers import (
     AI_ASSISTANT_MSG,
     AI_REINFORCEMENT_MSG,
+    SCENARIOS,
     add_examples_to_chat,
     generate_inventory,
     generate_reagents_pouch,
     generate_system_message_for_spellcast,
-    SCENARIOS,
 )
 
 set_page_config("Spell Engine", requires_auth=True)
