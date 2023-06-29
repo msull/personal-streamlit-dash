@@ -14,7 +14,6 @@ else:
         with profile:
             authenticator.logout("Logout", "main")
 
-        authenticator.logout("Logout", "sidebar", key='logout-side')
         st.header(f"Welcome *{username}*")
         st.write("Choose a page from the left")
 
