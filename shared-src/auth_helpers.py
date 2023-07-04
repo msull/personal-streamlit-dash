@@ -42,7 +42,7 @@ def save_auth_db(authenticate: Authenticate):
     credentials_data["preauthorized"] = authenticate.preauthorized
 
 
-@st.cache_resource(experimental_allow_widgets=True)
+@st.cache_resource(experimental_allow_widgets=False)
 def load_auth_config() -> AuthSettings:
     app_settings = AppSettings()
     credentials_data = Index(str(app_settings.credentials_dir))

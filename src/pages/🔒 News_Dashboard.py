@@ -323,5 +323,5 @@ try:
         session_data = SessionData.parse_obj(st.session_state)
     main()
 finally:
-    with st.sidebar.expander("Session Data"):
+    with st.expander("Session Data"):
         st.write(dict(sorted(st.session_state.items())))

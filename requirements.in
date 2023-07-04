@@ -1,3 +1,4 @@
+beautifulsoup4
 diskcache
 extra-streamlit-components
 humanize
@@ -7,6 +8,7 @@ openai
 openpyxl
 pydantic
 pypdfium2
+readability-lxml
 streamlit-authenticator
 streamlit>1.23
 tzdata
