@@ -85,13 +85,13 @@ def is_valid(url):
 
 
 @st.cache_data
-def get_soup(url):
+def fetch_url(url):
     logger.info(f"Fetching {url}")
     return BeautifulSoup(get_url_contents(url), "html.parser")
 
 
 def get_all_links(url):
-    soup = get_soup(url)
+    soup = fetch_url(url)
     domain = urlparse(url).netloc
     num_links = 0
     links = []
@@ -117,7 +117,7 @@ def get_all_links(url):
 
 
 # Streamlit Interface
-st.title("Python Web Scraper")
+st.title("Web Scraper")
 
 # User Inputs
 with st.form("Scrape"):
@@ -165,11 +165,12 @@ with st.form("Scrape"):
                             break
                         try:
                             if url not in scraped_urls:
+                                soup = fetch_url(url)
                                 for found_url in get_all_links(url):
                                     new_urls_to_scrape.add(found_url)
-                                st.session_state.scraped_urls[level + 1].append(url)
+                                st.session_state.scraped_urls[level + 1].append((url, soup.title.string))
                                 scraped_urls.add(url)
-                                
+
                                 num_crawled += 1
                                 crawled_count_display.write(f"Num crawled {num_crawled}")
                         except Exception as e:
@@ -180,11 +181,11 @@ with st.form("Scrape"):
             else:
                 st.write(f"The website at {base_url} has disallowed scraping.")
 
-if d := st.session_state.scraped_urls:
+if st.session_state.scraped_urls:
     core_content, links = st.columns((2, 1))
 
     with core_content:
-        root_url = d[1][0]
+        root_url = st.session_state.scraped_urls[1][0][0]
         root_doc = Document(get_url_contents(root_url))
 
         st.write(f"Scrape Results for **{root_doc.short_title()}**")
@@ -209,15 +210,16 @@ if d := st.session_state.scraped_urls:
     with links:
 
         def _view_url(view_level, view_idx):
-            st.session_state.view_url = st.session_state.scraped_urls[view_level][view_idx]
+            st.session_state.view_url = st.session_state.scraped_urls[view_level][view_idx][0]
 
         for level, scraped_urls in st.session_state.scraped_urls.items():
             st.write(f"Level {level}")
             with st.expander(f"Crawl depth {level}"):
-                for idx, url in enumerate(scraped_urls):
+                for idx, scraped_url in enumerate(scraped_urls):
+                    url, title = scraped_url
                     if idx > 0:
                         st.divider()
-                    st.write(url)
+                    st.write(f"[{title}]({url})")
                     st.button("View", key=f"view-{level}-{idx}", on_click=_view_url, args=(level, idx))
 
 
