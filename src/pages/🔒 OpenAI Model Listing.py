@@ -6,15 +6,6 @@ from page_helpers import item_paginator
 set_page_config("OpenAI Model Listing", requires_auth=True)
 
 
-@st.cache_data
-def list_models():
-    return sorted(openai.Model.list().data, key=lambda x: x.id)
-
-
-models = list_models()
-model_ids = [x.id for x in models]
-gpt_models = [x for x in models if "gpt" in x.id]
-gpt_model_ids = [x.id for x in gpt_models]
 
 
 def display_item(idx):

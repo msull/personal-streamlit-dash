@@ -1,4 +1,7 @@
 # Required Libraries
+from collections import defaultdict
+from random import choice
+
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
@@ -10,7 +13,16 @@ from diskcache import Cache
 from auth_helpers import set_page_config
 from common_settings import AppSettings
 from readability import Document
+import streamlit.components.v1 as components
+
 set_page_config("Web scraper", requires_auth=True)
+
+ONE_YEAR_IN_SECS = 60 * 60 * 24 * 365
+
+if not "scraped_urls" in st.session_state:
+    st.session_state.scraped_urls = defaultdict(list)
+    st.session_state.view_url = None
+
 
 @st.cache_resource
 def get_settings():
@@ -18,8 +30,8 @@ def get_settings():
         app_debug=False,
     )
 
-settings = get_settings()
 
+settings = get_settings()
 
 
 @st.cache_resource
@@ -38,6 +50,15 @@ def get_url_cachekey(url: str) -> str:
     return url.replace("/", "_").replace(".", "_")
 
 
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
+    # add as many as you want
+]
+
+
 def get_url_contents(url: str, cache_time_secs=3600):
     cache_url = get_url_cachekey(url)
     cached_content_path = settings.webscraper_content_dir / cache_url
@@ -48,9 +69,11 @@ def get_url_contents(url: str, cache_time_secs=3600):
         content = cached_content_path.read_bytes()
     else:
         logger.debug(f"Making web request to {url=}")
-        content = requests.get(url, timeout=10).content
+        headers = {"User-Agent": choice(USER_AGENTS)}
+
+        content = requests.get(url, timeout=10, headers=headers).content
         cached_content_path.write_bytes(content)
-        CACHE.set(url, True, expire=cache_time_secs)
+        CACHE.set(cache_url, True, expire=ONE_YEAR_IN_SECS)
 
     return content
 
@@ -99,39 +122,41 @@ st.title("Python Web Scraper")
 # User Inputs
 with st.form("Scrape"):
     base_url = st.text_input("Enter Base URL: ")
+    if base_url:
+        base_url = base_url.removesuffix('/')
     depth = st.slider("Select Depth of Crawl: ", min_value=1, max_value=5, value=2)
     max_links_crawled = st.number_input("Max number of links crawled: ", min_value=1, max_value=1000, value=50, step=25)
     allow_cross_domain = st.checkbox("Allow Cross-Domain Crawling?")
 
-    begin_scrape = st.form_submit_button("Start Scraping")
+    if st.form_submit_button("Start Scraping") and base_url:
+        logger.info(f"Begin scrape for {base_url=}")
+        # reset session state vars
+        st.session_state.scraped_urls = defaultdict(list)
+        st.session_state.view_url = None
+        with st.spinner(f"Crawling {base_url}..."):
+            num_crawled = 0
+            crawled_count_display = st.empty()
 
-if begin_scrape and base_url:
-    logger.info(f"Begin scrape for {base_url=}")
-    with st.spinner(f"Crawling {base_url}..."):
-        num_crawled = 0
-        crawled_count_display = st.empty()
+            # Check Robots.txt
+            rp = RobotFileParser()
+            rp.set_url(urljoin(base_url, "/robots.txt"))
+            try:
+                rp.read()
+            except:
+                no_robots_txt = True
+            else:
+                no_robots_txt = False
 
-        # Check Robots.txt
-        rp = RobotFileParser()
-        rp.set_url(urljoin(base_url, "/robots.txt"))
-        try:
-            rp.read()
-        except:
-            no_robots_txt = True
-        else:
-            no_robots_txt = False
+            if no_robots_txt or rp.can_fetch("*", base_url):
+                urls_to_scrape = {base_url}
+                scraped_urls = set()
 
-        if no_robots_txt or rp.can_fetch("*", base_url):
-            urls_to_scrape = {base_url}
-            scraped_urls = set()
+                stop_processing = False
 
-            stop_processing = False
-
-            # Crawl Pages and Fetch Data
-            for level in range(depth):
-                if stop_processing:
-                    break
-                with st.expander(f"Crawl depth {level +1}"):
+                # Crawl Pages and Fetch Data
+                for level in range(depth):
+                    if stop_processing:
+                        break
                     new_urls_to_scrape = set()
                     for url in urls_to_scrape:
                         if num_crawled >= max_links_crawled:
@@ -142,25 +167,61 @@ if begin_scrape and base_url:
                             if url not in scraped_urls:
                                 for found_url in get_all_links(url):
                                     new_urls_to_scrape.add(found_url)
+                                st.session_state.scraped_urls[level + 1].append(url)
                                 scraped_urls.add(url)
+                                
                                 num_crawled += 1
                                 crawled_count_display.write(f"Num crawled {num_crawled}")
                         except Exception as e:
-                            logger.exception(f'Error scraping {url=}')
+                            logger.exception(f"Error scraping {url=}")
                             st.write(f"Error scraping {url}: {e}")
-                        else:
-                            if level == 0:
-                                doc = Document(get_url_contents(url))
-                                result = "Title:" + doc.short_title() + "\n" + doc.summary()
-                                st.code(result)
-                                # st.write(doc.title())
-                                # st.write(doc.short_title())
-                                # st.write(doc.summary())
-                                # st.write(doc.content())
-                                # st.write(doc)
                     st.write(f"Done with level {level+1}")
                     urls_to_scrape = new_urls_to_scrape
+            else:
+                st.write(f"The website at {base_url} has disallowed scraping.")
+
+if d := st.session_state.scraped_urls:
+    core_content, links = st.columns((2, 1))
+
+    with core_content:
+        root_url = d[1][0]
+        root_doc = Document(get_url_contents(root_url))
+
+        st.write(f"Scrape Results for **{root_doc.short_title()}**")
+
+        if st.session_state.view_url:
+            view_url = st.session_state.view_url
+            view_doc = Document(get_url_contents(st.session_state.view_url))
         else:
-            st.write(f"The website at {base_url} has disallowed scraping.")
-else:
-    st.write("Please input a base URL to start scraping.")
+            view_url = root_url
+            view_doc = root_doc
+        view_type = st.radio("View type", ("summary", "full"))
+        if view_type == "summary":
+            view_content = view_doc.summary()
+        else:
+            view_content = view_doc.content()
+
+        st.write(f'**Viewing** "{view_doc.title()}"')
+        st.caption(view_url)
+
+        components.html(view_content, height=800, scrolling=True)
+
+    with links:
+
+        def _view_url(view_level, view_idx):
+            st.session_state.view_url = st.session_state.scraped_urls[view_level][view_idx]
+
+        for level, scraped_urls in st.session_state.scraped_urls.items():
+            st.write(f"Level {level}")
+            with st.expander(f"Crawl depth {level}"):
+                for idx, url in enumerate(scraped_urls):
+                    if idx > 0:
+                        st.divider()
+                    st.write(url)
+                    st.button("View", key=f"view-{level}-{idx}", on_click=_view_url, args=(level, idx))
+
+
+st.divider()
+
+with st.expander("Session State"):
+    st.write(st.session_state)
