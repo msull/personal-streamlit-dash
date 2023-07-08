@@ -6,8 +6,6 @@ from page_helpers import item_paginator
 set_page_config("OpenAI Model Listing", requires_auth=True)
 
 
-
-
 def display_item(idx):
     st.write(models[idx])
 

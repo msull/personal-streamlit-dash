@@ -4,29 +4,33 @@ from typing import List, Optional
 from chat_session import ChatSession
 
 AI_ASSISTANT_MSG = """
-    You are a spell interpreting machine.
-    Your job is to gauge the intent of the wizard's spell, consider the ingredients they're using, and determine the result.
-    Every wizard has a power level that governs the typical effect they can achieve:
-    
-    High quality magical ingredients increase what a wizard may achieve.
+As a spell interpreting AI, gauge the wizard's intent, ingredient usage, and power level to determine the spell's outcome.
 
-    Keep in mind their wizard level, the potency of their ingredients, and the extent of their reach.
-    Spells that are too ambitious or use inappropriate ingredients should fizzle or even backlash.
-    You may add a dash of whimsy and unpredictability, as magic is a force that often defies expectation.
+Wizard Levels:
+
+Apprentice: Minor elemental and illusionary spells.
+Adept: Moderate transformations, shielding, teleportation, healing, and elemental control.
+Sorcerer: Powerful healing, transformation, teleportation, complex illusions, and elemental summoning.
+Archmage: Resurrection, large-scale protection, weather control, entity summoning and control, and long-distance teleportation.
+
+Quality ingredients enhance a wizard's abilities.
+
+Begin your response with the outcome indicator followed by a blank line:
+
+Cast - Successful spell as intended (Begin with "CAST").
+Surge - Overpowered success (Begin with "SURGE").
+Fizzle - Failed spell (Begin with "FIZZLE").
+Backlash - Failed spell with negative consequences (Begin with "BACKLASH").
+
+Keep the wizard's level and ingredient potency in mind. Overambitious spells or mismatched ingredients may result in failures or backlash. 
+You may add a dash of whimsy and unpredictability, as magic is a force that often defies expectation.
 """
 
 AI_REINFORCEMENT_MSG = """
-    Remember, you are a spell interpreting machine tasked with determining the outcome of this attempted spell cast.
-    Keep in mind their wizard level, the potency of their ingredients, and the extent of their reach when deciding the outcome.
-    
-    Typical effects based on wizard level:
-    
-    Apprentice: Lighting a small flame, conjuring a light breeze, creating minor illusions such as the appearance of a beautiful flower or a soothing melody, manipulating small quantities of water, communicating with small, nearby creatures.
-    Adept: Conjuring a protective magical shield, teleporting short distances within sight, transforming small objects into other forms, casting moderate healing spells, conjuring elemental forces such as a gust of wind or a jet of flame.
-    Sorcerer: Teleporting to known locations out of sight, casting powerful healing and restoration spells, conjuring large and complex illusions, summoning and controlling elemental creatures, transforming living beings into other forms.
-    Archmage: Resurrecting the dead, casting city-wide protective barriers, altering the weather over a large area, summoning and controlling powerful entities, teleporting to unvisited locations.
-    
-    Do not directly mention the wizard's level.
+Remember, you are a spell interpreting AI tasked with determining the outcome of this attempted spell cast.
+Keep in mind their wizard level and the potency of their ingredients when deciding the outcome.
+Do not directly mention the wizard's level (i.e. Apprentice, Adept, Sorcerer, or Archmage) in your response.
+A good response begins with an outcome indicator followed by a blank line.
 """
 
 
@@ -37,6 +41,29 @@ class SpellExample:
     wizard_level: str
     items_used: List[str]
     result: str
+
+
+NewExample1 = SpellExample(
+    user="I want to communicate with the forest creatures.",
+    scene="The player is in a lush forest, surrounded by unseen wildlife.",
+    wizard_level="apprentice",
+    items_used=["Crumbled Leaf", "Creek Water"],
+    result="CAST\n\nYour hands glow softly as you gently scatters the Crumbled Leaf onto the Creek Water, your voice whispering an ancient incantation. Gradually, the rustle of the forest floor sounds much like a conversation, voices of the unseen animals echoing in your ears. The woods come alive with the whispers of its inhabitants. The spell worked—it seems you have been granted the ability to understand the language of the forest creatures",
+)
+NewExample2 = SpellExample(
+    user="I want to light a path through the dark forest.",
+    scene="The player is lost in a thick, unlit forest at midnight.",
+    wizard_level="apprentice",
+    items_used=["Will-o'-the-Wisp Essence", "Powdered Moondust"],
+    result="CAST\n\nYou reach into your pouch, pulling out the Will-o'-the-Wisp Essence and a pinch of Powdered Moondust. As you whisper the spell, the Essence ignites, floating up to form a string of tiny, luminescent orbs.\n\nThese orbs hover in the air, casting a soft, moon-like glow that illuminates a path through the forest. The light is not strong, but it is enough to see your way.",
+)
+NewExample3 = SpellExample(
+    user="I want to turn the troll into a harmless rabbit.",
+    scene="The player stands at the edge of a bridge, confronted by a grim troll. No on else is around.",
+    wizard_level="apprentice",
+    items_used=["Basilisk's Scale", "Fairy Dust"],
+    result="BACKLASH\n\nAs you imbue the Basilisk's Scale with a dusting of Fairy Dust, you chant your spell with a hopeful heart. However, the magic is too potent for your current level, misfires wildly and ricochets off the troll and back onto you in a diversion of spell energy. The troll remains unchanged, but you find yourself staring at the world from a much lower vantage point. You have been temporarily transformed into a rabbit yourself.",
+)
 
 
 apprentice_example = SpellExample(
@@ -169,20 +196,23 @@ apprentice_backlash_2 = SpellExample(
 SPELL_EXAMPLES = [
     # apprentice_example,
     # apprentice_fizzle,
-    apprentice_backlash,
-    adept_backlash,
-    apprentice_fail_1,
-    adept_fizzle,
+    # apprentice_backlash,
+    # adept_backlash,
+    # apprentice_fail_1,
+    # adept_fizzle,
     # sorcerer_backlash,
     # sorcerer_example,
-    sorcerer_fizzle,
-    apprentice_backlash_2,
+    # sorcerer_fizzle,
+    # apprentice_backlash_2,
     # adept_example,
     # archmage_backlash,
     # archmage_example,
     # archmage_fizzle,
-    apprentice_fail_2,
-    apprentice_backlash_1,
+    # apprentice_fail_2,
+    # apprentice_backlash_1,
+    NewExample1,
+    NewExample2,
+    NewExample3,
 ]
 
 
@@ -431,6 +461,7 @@ mundane_items = [
 
 
 SCENARIOS = [
+    "The player approaches a bridge, and is confronted by a mystical Troll of great power. This troll is highly resistant to magical effects, particularly enchantments. No on else is around.",
     "The player is in a dark forest at midnight, surrounded by glowing faeries.",
     "The player stands at the edge of a chasm with a castle on the opposite side, just out of reach.",
     "The player finds themselves on a raft in a stormy sea, the water teeming with aggressive water spirits.",
@@ -458,3 +489,7 @@ SCENARIOS = [
     "The player is in a shadowy realm with an assassin made of darkness.",
     "The player is on a battlefield facing a horde of undead warriors.",
 ]
+
+cs = ChatSession(initial_system_message=AI_ASSISTANT_MSG, reinforcement_system_msg=AI_REINFORCEMENT_MSG)
+add_examples_to_chat(cs)
+print(cs)

@@ -1,19 +1,18 @@
 # Required Libraries
 from collections import defaultdict
 from random import choice
-
-import streamlit as st
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
-from logzero import logger
-from diskcache import Cache
 
-from auth_helpers import set_page_config
-from common_settings import AppSettings
-from readability import Document
+import requests
+import streamlit as st
 import streamlit.components.v1 as components
+from auth_helpers import set_page_config
+from bs4 import BeautifulSoup
+from common_settings import AppSettings
+from diskcache import Cache
+from logzero import logger
+from readability import Document
 
 set_page_config("Web scraper", requires_auth=True)
 
@@ -123,7 +122,7 @@ st.title("Web Scraper")
 with st.form("Scrape"):
     base_url = st.text_input("Enter Base URL: ")
     if base_url:
-        base_url = base_url.removesuffix('/')
+        base_url = base_url.removesuffix("/")
     depth = st.slider("Select Depth of Crawl: ", min_value=1, max_value=5, value=2)
     max_links_crawled = st.number_input("Max number of links crawled: ", min_value=1, max_value=1000, value=50, step=25)
     allow_cross_domain = st.checkbox("Allow Cross-Domain Crawling?")

@@ -40,7 +40,7 @@ class SessionData(SessionDataBase):
 
     spell_cast_level: str = ""
     spell_description: str = ""
-    spell_scenario: str = "The player is confronting a troll on a stone bridge. There is no one else nearby."
+    spell_scenario: str = ""
     spell_description_saved: str = ""
     spell_items_used: List[str] = []
     spell_reagents: List[str] = []
@@ -155,8 +155,7 @@ def generate_spell_result(wizard_level: str):
 
     check_for_flagged_content(session_data.spell_description)
 
-    chat_session = ChatSession()
-    chat_session.system_says(AI_ASSISTANT_MSG)
+    chat_session = ChatSession(initial_system_message=AI_ASSISTANT_MSG, reinforcement_system_msg=AI_REINFORCEMENT_MSG)
     add_examples_to_chat(chat_session)
     chat_session.user_says(session_data.spell_description)
     chat_session.system_says(
@@ -168,7 +167,6 @@ def generate_spell_result(wizard_level: str):
         )
     )
     logger.debug(chat_session.history[-3:])
-    chat_session.system_says(AI_REINFORCEMENT_MSG)
     response = chat_session.get_ai_response()
     session_data.spell_result = response["choices"][0]["message"]["content"]
     session_data.spell_raw_result = response.to_dict()

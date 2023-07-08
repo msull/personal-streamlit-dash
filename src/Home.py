@@ -1,6 +1,6 @@
+import extra_streamlit_components as stx
 import streamlit as st
 from auth_helpers import LoginRequired, save_auth_db, set_page_config
-import extra_streamlit_components as stx
 
 try:
     authenticator, username = set_page_config("Home", requires_auth=True)
@@ -43,5 +43,3 @@ else:
         #     st.error(e)
 
     main()
-
-
