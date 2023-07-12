@@ -14,6 +14,8 @@ def load_data(file):
     # Load the data
     if file.type == "text/csv":
         data = pd.read_csv(file, dtype=str, low_memory=False)
+    elif file.type == "text/tab-separated-values":
+        data = pd.read_csv(file, dtype=str, low_memory=False, sep="\t")
     elif (
         file.type == "application/vnd.ms-excel"
         or file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -24,7 +26,7 @@ def load_data(file):
     elif file.type == "application/octet-stream":  # Assuming this is a Parquet file
         data = pd.read_parquet(file, dtype=str)
     else:
-        raise RuntimeError("Unknown / unsupported file type")
+        raise RuntimeError(f"Unknown / unsupported file type {file.type}")
 
     return data.replace({np.NAN: None})
 
@@ -158,7 +160,7 @@ def main():
 
     # Upload the dataset
     file = st.file_uploader(
-        "Upload a CSV, Excel, JSON, or Parquet file", type=["csv", "xls", "xlsx", "json", "parquet"]
+        "Upload a CSV, Excel, JSON, or Parquet file", type=["csv", "tsv", "xls", "xlsx", "json", "parquet"]
     )
 
     # Load and display the data

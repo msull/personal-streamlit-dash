@@ -3,6 +3,7 @@ diskcache
 extra-streamlit-components
 humanize
 logzero
+matplotlib
 numpy
 newsapi-python
 openai
