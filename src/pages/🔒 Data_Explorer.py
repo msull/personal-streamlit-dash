@@ -50,6 +50,12 @@ def filter_and_group_and_sort(data, filter_text, group_by_columns, sort_by_colum
 
 # Function to display data
 def display_data(df):
+    if st.checkbox("Create Column"):
+        column_name = st.text_input("col_name")
+        eval_this = st.text_input("EVAL input")
+        if column_name and eval_this:
+            df[column_name] = eval(eval_this)
+
     if st.checkbox("Row Explorer", on_change=reset_paginator, args=("Row Explorer",)):
         # reset the paginator when filtering changes
         filter_text = st.text_input("Filter rows", on_change=reset_paginator, args=("Row Explorer",))
@@ -70,6 +76,8 @@ def display_data(df):
             number = st.number_input("Number of rows to view", min_value=1, value=50)
             st.dataframe(filtered_df.head(number))
 
+        df = filtered_df
+
         def _display_row(idx: int):
             st.subheader(f"Row {idx + 1}")
             row_data = filtered_df.iloc[idx]
@@ -82,7 +90,7 @@ def display_data(df):
                         data = data[0]
                 display_data[column] = data
 
-            st.code(json.dumps(display_data, indent=2))
+            st.code(json.dumps(display_data, indent=2, default=str))
 
         item_paginator("Row Explorer", filtered_df.shape[0], _display_row, enable_keypress_nav=True)
         st.divider()
