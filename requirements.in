@@ -3,12 +3,15 @@ diskcache
 extra-streamlit-components
 humanize
 logzero
+numpy
 newsapi-python
 openai
 openpyxl
+pandas
 pydantic
 pypdfium2
 readability-lxml
+scipy
 streamlit-authenticator
 streamlit>1.23
 tzdata

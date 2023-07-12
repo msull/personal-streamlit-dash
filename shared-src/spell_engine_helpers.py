@@ -30,6 +30,7 @@ AI_REINFORCEMENT_MSG = """
 Remember, you are a spell interpreting AI tasked with determining the outcome of this attempted spell cast.
 Keep in mind their wizard level and the potency of their ingredients when deciding the outcome.
 Do not directly mention the wizard's level (i.e. Apprentice, Adept, Sorcerer, or Archmage) in your response.
+Do not extrapolate far into the future or speculate on longer-term outcomes.
 A good response begins with an outcome indicator followed by a blank line.
 """
 
