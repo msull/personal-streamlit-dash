@@ -5,12 +5,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import requests
 import streamlit as st
-from auth_helpers import set_page_config
 from scipy.optimize import curve_fit
 
-set_page_config("Water Data Exploration", requires_auth=False)
+st.set_page_config("Water Data Exploration", layout="wide", initial_sidebar_state="collapsed")
 
 
 def calculate_rmse(y_actual, y_pred):
