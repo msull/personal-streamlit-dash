@@ -76,14 +76,6 @@ def load_water_data():
     return df
 
 
-def test_data():
-    data = requests.get(
-        "https://waterdata.usgs.gov/nwis/dvstat?referred_module=sw&amp;start_dt=2001-01-01&amp;end_dt=2007-12-31&amp;stat_cds=mean_va&amp;format=rdb&amp;date_format=YYYY-MM-DD&amp;rdb_compression=gz&amp;submitted_form=parameter_selection_list"
-    )
-    breakpoint()
-    return data
-
-
 def main():
     st.title("Water Data Exploration")
     # Assume some arbitrary stage and discharge values
