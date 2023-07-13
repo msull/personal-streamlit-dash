@@ -3,12 +3,12 @@ diskcache
 extra-streamlit-components
 humanize
 logzero
-matplotlib
 numpy
 newsapi-python
 openai
 openpyxl
 pandas
+plotly
 pydantic
 pypdfium2
 readability-lxml
