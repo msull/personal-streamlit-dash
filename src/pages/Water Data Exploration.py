@@ -8,73 +8,13 @@ import plotly.graph_objects as go
 import streamlit as st
 from scipy.optimize import curve_fit
 
+# Set the page configuration
 st.set_page_config("Water Data Exploration", layout="wide", initial_sidebar_state="collapsed")
 
 
-def calculate_rmse(y_actual, y_pred):
-    return np.sqrt(np.mean((y_actual - y_pred) ** 2))
-
-
-@dataclass
-class FitResult:
-    model: np.poly1d or callable
-    stage_fit: np.ndarray
-    discharge_fit: np.ndarray
-    label: str
-    rmse: float
-
-    def predict(self, stage):
-        return self.model(stage)
-
-
-def fit_power_law(stage, discharge):
-    params, _ = curve_fit(power_law, stage, discharge, maxfev=5000)
-    model = lambda x: power_law(x, *params)
-    stage_fit = np.linspace(stage.min(), stage.max(), 100)
-    discharge_fit = model(stage_fit)
-    label = f"Fit: a={params[0]:.3f}, b={params[1]:.3f}"
-    rmse = calculate_rmse(discharge, model(stage))
-    return FitResult(model, stage_fit, discharge_fit, label, rmse)
-
-
-def fit_polynomial(stage, discharge, fit_degree: int):
-    params = np.polyfit(stage, discharge, fit_degree)
-    model = np.poly1d(params)
-    stage_fit = np.linspace(stage.min(), stage.max(), 100)
-    discharge_fit = model(stage_fit)
-    label = f"Fit: {model}"
-    rmse = calculate_rmse(discharge, model(stage))
-    return FitResult(model, stage_fit, discharge_fit, label, rmse)
-
-
-DATA_PATH = Path(__file__).parent.parent / "static_data" / "waterdata2008.tsv"
-
-
-@st.cache_data
-def load_water_data():
-    df = pd.read_csv(DATA_PATH, sep="\t", dtype=str, low_memory=False)
-    df = df.groupby(["begin_yr", "month_nu", "day_nu"], as_index=False).aggregate(list)
-    df["date"] = pd.to_datetime(
-        df[["begin_yr", "month_nu", "day_nu"]].rename(
-            columns={"begin_yr": "year", "month_nu": "month", "day_nu": "day"}
-        )
-    )
-    df[["discharge_rate", "stage_val"]] = df["mean_va"].apply(pd.Series)
-    df["discharge_rate"] = df["discharge_rate"].astype(int)
-    df["stage_val"] = df["stage_val"].astype(float)
-    df = df.dropna(subset=["discharge_rate", "stage_val"])
-    # Normalize the stage and discharge values
-    df["stage_val_norm"] = (df["stage_val"] - df["stage_val"].min()) / (df["stage_val"].max() - df["stage_val"].min())
-    df["discharge_rate_norm"] = (df["discharge_rate"] - df["discharge_rate"].min()) / (
-        df["discharge_rate"].max() - df["discharge_rate"].min()
-    )
-
-    df = df.sort_values(by=["date"])
-
-    return df
-
-
 def main():
+    """Main function to run the Streamlit app."""
+
     st.title("Water Data Exploration")
     # Assume some arbitrary stage and discharge values
     water_data = load_water_data()
@@ -101,18 +41,22 @@ def main():
         st.dataframe(water_data[["date", "stage_val", "discharge_rate"]])
 
     with st.expander("Daily Stage and Discharge", expanded=True):
-        chart_type = st.selectbox("View Option", ("Normalized", "Raw"), label_visibility="collapsed")
+        normalize_data = (
+            st.selectbox("View Option", ("Raw", "Normalized"), label_visibility="collapsed") == "Normalized"
+        )
 
-        fig = go.Figure()
+        daily_fig = go.Figure()
         stage_key = "stage_val"
         discharge_key = "discharge_rate"
-        if chart_type == "Normalized":
+        stage_range = [int(df["stage_val"].min()) - 3, int(df["stage_val"].max()) + 3]
+        if normalize_data:
             stage_key += "_norm"
             discharge_key += "_norm"
+            stage_range = None
 
-        fig.add_trace(go.Bar(x=water_data["date"], y=water_data[stage_key], name="Stage", marker_color="blue"))
+        daily_fig.add_trace(go.Bar(x=water_data["date"], y=water_data[stage_key], name="Stage", marker_color="blue"))
 
-        fig.add_trace(
+        daily_fig.add_trace(
             go.Scatter(
                 x=water_data["date"],
                 y=water_data[discharge_key],
@@ -122,27 +66,28 @@ def main():
             )
         )
 
-        fig.update_layout(
-            xaxis=dict(domain=[0.3, 0.7]),
-            yaxis=dict(title="Stage (f)", titlefont=dict(color="blue"), tickfont=dict(color="blue")),
+        daily_fig.update_layout(
+            # xaxis=dict(domain=[0.3, 0.7]),
+            yaxis=dict(
+                title="Stage (f)",
+                titlefont=dict(color="blue"),
+                tickfont=dict(color="blue"),
+                range=stage_range,
+            ),
             yaxis2=dict(
                 title="Discharge (f^3/s)",
                 titlefont=dict(color="red"),
                 tickfont=dict(color="red"),
-                # anchor="free",
                 overlaying="y",
                 side="right",
-                # position=1,
             ),
-            legend=dict(
-                yanchor="top", y=-0.3, xanchor="left", x=0.25  # adjust these as needed  # adjust these as needed
-            ),
+            legend=dict(yanchor="top", y=-0.3, xanchor="left", x=0.25),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        chart_placeholder = st.empty()
 
-    with st.expander("Stage Vs Discharge", expanded=True):
-        fit_type = st.selectbox("fit-type", ("Polynomial Model", "None", "Power Law"))
+    with st.expander("Discharge by Stage Level", expanded=True):
+        fit_type = st.selectbox("fit-type", ("None", "Power Law", "Polynomial Model"))
         model_fit = None
         if fit_type == "Power Law":
             model_fit = fit_power_law(stage, discharge)
@@ -163,7 +108,7 @@ def main():
         fig.update_layout(
             xaxis_title="Stage (f)",
             yaxis_title="Discharge (f^3/s)",
-            title="Hydrology Rating Curve",
+            title="Discharge by stage level",
             legend=dict(
                 yanchor="top", y=-0.3, xanchor="left", x=-0.1  # adjust these as needed  # adjust these as needed
             ),
@@ -175,6 +120,18 @@ def main():
             st.metric("RMSE", model_fit.rmse)
 
     if model_fit:
+        # Predict discharge using the fitted model
+        predicted_discharge = model_fit.predict(water_data["stage_val"], normalized=normalize_data)
+        # Add predicted discharge to the daily discharge plot
+        daily_fig.add_trace(
+            go.Scatter(
+                x=water_data["date"],
+                y=predicted_discharge,
+                name="Predicted Discharge",
+                line=dict(color="cyan"),
+                yaxis="y2",
+            )
+        )
         with st.expander("Rating Table", expanded=True):
             min_stage = float(water_data["stage_val"].min() // 5 * 5)  # nearest lower 5
             min_val = round(water_data["stage_val"].min(), 1)
@@ -194,9 +151,92 @@ def main():
             rating_table = pd.DataFrame({"Stage Level": stages, "Predicted Discharge": discharges})
             st.dataframe(rating_table)
 
+    chart_placeholder.plotly_chart(daily_fig, use_container_width=True)
+
+
+def calculate_rmse(y_actual, y_pred):
+    """Calculate Root Mean Squared Error between actual and predicted values."""
+    return np.sqrt(np.mean((y_actual - y_pred) ** 2))
+
 
 def power_law(x, a, b):
+    """Power law function used in curve fitting."""
     return a * np.power(x, b)
+
+
+@dataclass
+class FitResult:
+    """A class used to represent the result of a model fitting."""
+
+    model: np.poly1d or callable
+    stage_fit: np.ndarray
+    discharge_fit: np.ndarray
+    label: str
+    rmse: float
+    min_discharge: float
+    max_discharge: float
+
+    def predict(self, stage, normalized=False):
+        """
+        Predict discharge based on the given stage.
+        If normalized is True, normalize the predicted discharge based on the min and max discharge of the fit.
+        """
+        discharge = self.model(stage)
+        if normalized:
+            discharge = (discharge - self.min_discharge) / (self.max_discharge - self.min_discharge)
+        return discharge
+
+
+def fit_power_law(stage, discharge):
+    """Fit a power law model to the given stage and discharge data."""
+    params, _ = curve_fit(power_law, stage, discharge, maxfev=5000)
+    model = lambda x: power_law(x, *params)
+    stage_fit = np.linspace(stage.min(), stage.max(), 100)
+    discharge_fit = model(stage_fit)
+    label = f"Fit: a={params[0]:.3f}, b={params[1]:.3f}"
+    rmse = calculate_rmse(discharge, model(stage))
+    return FitResult(model, stage_fit, discharge_fit, label, rmse, discharge.min(), discharge.max())
+
+
+@st.cache_data
+def fit_polynomial(stage, discharge, fit_degree: int):
+    """Fit a polynomial model of given degree to the stage and discharge data."""
+    params = np.polyfit(stage, discharge, fit_degree)
+    model = np.poly1d(params)
+    stage_fit = np.linspace(stage.min(), stage.max(), 100)
+    discharge_fit = model(stage_fit)
+    label = f"Fit: {model}"
+    rmse = calculate_rmse(discharge, model(stage))
+    return FitResult(model, stage_fit, discharge_fit, label, rmse, discharge.min(), discharge.max())
+
+
+DATA_PATH = Path(__file__).parent.parent / "static_data" / "waterdata2008.tsv"
+
+
+@st.cache_data
+def load_water_data():
+    """Load water data from CSV file and return as DataFrame with necessary processing and normalization."""
+
+    df = pd.read_csv(DATA_PATH, sep="\t", dtype=str, low_memory=False)
+    df = df.groupby(["begin_yr", "month_nu", "day_nu"], as_index=False).aggregate(list)
+    df["date"] = pd.to_datetime(
+        df[["begin_yr", "month_nu", "day_nu"]].rename(
+            columns={"begin_yr": "year", "month_nu": "month", "day_nu": "day"}
+        )
+    )
+    df[["discharge_rate", "stage_val"]] = df["mean_va"].apply(pd.Series)
+    df["discharge_rate"] = df["discharge_rate"].astype(int)
+    df["stage_val"] = df["stage_val"].astype(float)
+    df = df.dropna(subset=["discharge_rate", "stage_val"])
+    # Normalize the stage and discharge values
+    df["stage_val_norm"] = (df["stage_val"] - df["stage_val"].min()) / (df["stage_val"].max() - df["stage_val"].min())
+    df["discharge_rate_norm"] = (df["discharge_rate"] - df["discharge_rate"].min()) / (
+        df["discharge_rate"].max() - df["discharge_rate"].min()
+    )
+
+    df = df.sort_values(by=["date"])
+
+    return df
 
 
 main()
