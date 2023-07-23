@@ -5,6 +5,8 @@ from pathlib import Path
 from string import ascii_lowercase
 from typing import Callable, List, Optional, Union
 
+import numpy as np
+import pandas as pd
 import streamlit as st
 
 
@@ -177,6 +179,29 @@ def enable_keypress_navigation(prev_button="Prev", next_button="Next"):
 
 def check_or_x(value: bool) -> str:
     return "✅" if value else "❌"
+
+
+def load_data_from_file(file, replace_nan=True):
+    if file.type == "text/csv":
+        data = pd.read_csv(file, dtype=str, low_memory=False)
+    elif file.type == "text/tab-separated-values":
+        data = pd.read_csv(file, dtype=str, low_memory=False, sep="\t")
+    elif (
+        file.type == "application/vnd.ms-excel"
+        or file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ):
+        data = pd.read_excel(file, dtype=str)
+    elif file.type == "application/json":
+        data = pd.read_json(file, dtype=str)
+    elif file.type == "application/octet-stream":  # Assuming this is a Parquet file
+        data = pd.read_parquet(file, dtype=str)
+    else:
+        raise RuntimeError(f"Unknown / unsupported file type {file.type}")
+
+    if replace_nan:
+        return data.replace({np.NAN: None})
+    else:
+        return data
 
 
 def load_session(session_dir: Union[Path, str]):
