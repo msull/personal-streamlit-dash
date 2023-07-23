@@ -122,6 +122,7 @@ def set_page_config(
             st.warning("Please enter your username and password")
 
         if not authentication_status:
+            st.stop()
             raise LoginRequired()
 
         return authenticator, username
